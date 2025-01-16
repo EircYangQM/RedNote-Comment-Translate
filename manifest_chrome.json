@@ -1,0 +1,60 @@
+{
+  "description": "Translate Red Note(小红书) comments instantly with Google Translate. Customizable target language and a button to auto translate all comments",
+  "manifest_version": 3,
+  "name": "Red Note(小红书) Comment Translate Enhanced",
+  "version": "0.0.0.1",
+  "author": "EricYangQM",
+  "icons": {
+    "16": "icons/logo/logo-16.png",
+    "24": "icons/logo/logo-24.png",
+    "32": "icons/logo/logo-32.png",
+    "48": "icons/logo/logo-48.png",
+    "64": "icons/logo/logo-64.png",
+    "96": "icons/logo/logo-96.png"
+  },
+  "homepage_url": "https://github.com/EricYangQM/RedNote-Comment-Translate",
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.xiaohongshu.com/*"
+      ],
+      "js": [
+        "utils.js",
+        "inject.js"
+      ],
+      "css": [
+        "inject.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://translate.googleapis.com/translate_a/single"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/translate.png",
+        "icons/undo.png"
+      ],
+      "matches": [
+        "*://*.xiaohongshu.com/*"
+      ]
+    }
+  ],
+  "action": {
+    "default_icon": {
+      "16": "icons/logo/logo-16.png",
+      "24": "icons/logo/logo-24.png",
+      "32": "icons/logo/logo-32.png",
+      "48": "icons/logo/logo-48.png",
+      "64": "icons/logo/logo-64.png",
+      "96": "icons/logo/logo-96.png"
+    },
+    "default_title": "Red Note(小红书) Comment Translate",
+    "default_popup": "browser_action/index.html"
+  }
+}
