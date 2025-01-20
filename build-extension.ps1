@@ -19,8 +19,20 @@ if (-not (Test-Path $buildFolder)) {
     New-Item -ItemType Directory -Force -Path $buildFolder | Out-Null
 }
 
+$manifestFile = "$PSScriptRoot\manifest_$targetBrowser.json"
 
-$tempFolder = "$buildFolder\$baseFolderName" + "-$targetBrowser"
+$manifestFileContent = Get-Content -Path $manifestFile -Raw
+$manifest = $manifestFileContent | ConvertFrom-Json
+$version = $manifest.version
+
+if ($version) {
+    Write-Host "Extension version: $version"
+} else {
+    Write-Host "Version not found in the manifest file."
+    exit
+}
+
+$tempFolder = "$buildFolder\$baseFolderName" + "-$targetBrowser-$version"
 # delete first the temporary build folder
 if (Test-Path $tempFolder) {
     Remove-Item -Path $tempFolder -Recurse -Force
@@ -35,7 +47,6 @@ $excludeFiles = @("*.ps1", "build", "manifest_*.json", "ReadMe.md", "docs", ".gi
 Get-ChildItem -Path $PSScriptRoot -Exclude $excludeFiles | Copy-Item -Destination $tempFolder -Recurse -Force
 
 # Copy the appropriate manifest file based on the target browser
-$manifestFile = "$PSScriptRoot\manifest_$targetBrowser.json"
 if (Test-Path $manifestFile) {
     Copy-Item -Path $manifestFile -Destination "$tempFolder\manifest.json" -Force
 } else {
@@ -76,7 +87,7 @@ if (Test-Path $jsFilePath) {
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 
-$zipFileName = "$buildFolder\$baseFolderName" + "-$targetBrowser.zip"
+$zipFileName = "$buildFolder\$baseFolderName" + "-$targetBrowser-$version.zip"
 
 # If the zip file already exists, delete it
 if (Test-Path $zipFileName) {
