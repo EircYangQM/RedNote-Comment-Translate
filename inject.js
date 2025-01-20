@@ -46,11 +46,114 @@
 
         const anchors = tmp.querySelectorAll(QS_YT_LINK);
 
-        console.log("translate: " + tmp.innerText);
+        // console.log("translate: " + tmp.innerText);
 
-        fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${TARGET}&dt=t&dj=1&q=${encodeURIComponent(tmp.innerText)}`)
+        const type = "google";
+        const that = this;
+        if (type == "baidu") {
+            fetch('https://fanyi.baidu.com/ait/text/translate', {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Allow-Control-Allow-Origin': '*',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    "query": JSON.stringify(tmp.innerText),
+                    "from": "en",
+                    "to": TARGET,
+                    "needPhonetic": false,
+                    "domain": "common",
+                    "milliTimestamp": Date.now()
+                }),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('invalid response');
+                }
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+            
+                const readStream = (onmessage) => {
+                  reader.read().then(({ done, value }) => {
+                    if (done) {
+                      return;
+                    }
+                    
+                    const content = decoder.decode(value, { stream: true });
+                    const messages = content.split('\n\n');
+                    for (const message of messages) {
+                        console.log('message: ', message);
+                        try {
+                            const entities = message.split('\n');
+                            let event = null;
+                            let messageData = null;
+                            for (const entity of entities) {
+                                if (entity.startsWith('event:')) {
+                                    event = entity.replace('event:', '').trim();
+                                } else if (entity.startsWith('data:')) {
+                                    messageData = JSON.parse(entity.replace('data:', '').trim());
+                                }
+                            }
+                            if (messageData != null && event != null && event == "message") {
+                                onmessage(messageData);
+                            }
+                        } catch (error) {
+                            console.error('read failed. ', error);
+                        }
+                    }
+                    readStream(onmessage);
+                  }).catch(error => {
+                    console.error('error.', error);
+                  });
+                };
+            
+                const onmessage = function(event) {
+                    const data = event.data;
+                    if (data.event == "Finished") {
+                        const videoPlayer = document.querySelector('#movie_player video');
+                        for (const timestampAnchor of that._ntext.querySelectorAll('.timestamp-link')) {
+                            timestampAnchor.onclick = (e) => {
+                                e.preventDefault();
+                                videoPlayer.currentTime = parseInt(timestampAnchor.href.split('&t=').pop());
+                                videoPlayer.play();
+                                videoPlayer.scrollIntoView({ behavior: 'smooth' });
+        
+                            };
+                        }
+                        that.onclick();
+                    } else if (data.event == "Translating") {
+                        for (const sentence of data.list) {
+                            const line = sentence.dst.replace(/^“|”$/g,'').replace(/^"|"$/g, '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            that._ntext.innerHTML += line;
+                        }
+                        for (const anchor of anchors) {
+                            if (TIME_REGEX.test(anchor.innerText)) {
+                                // timestamp anchor
+                                anchor.classList.add("timestamp-link");
+        
+                            } else if (anchor.href === '') {
+                                anchor.href = (anchor.innerText.startsWith('http') ? '' : 'https://') + anchor.innerText;
+                            }
+                            that._ntext.innerHTML = that._ntext.innerHTML.replace(anchor.innerText, anchor.outerHTML);
+        
+                        }
+        
+                        for (const [emoji, img] of emojiToImage) {
+                            that._ntext.innerHTML = that._ntext.innerHTML.replace(new RegExp(emoji, 'g'), img);
+                        }
+                    }
+                };
+
+                readStream(onmessage);
+            })
+            .catch(error => {
+                console.error('Translate Request error:', error);
+            });
+        } else {
+            fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${TARGET}&dt=t&dj=1&q=${encodeURIComponent(tmp.innerText)}`)
             .then(response => response.json()).then(json => {
-                console.log("translated: " + json);
+                // console.log("translated: " + json);
 
                 for (const sentence of json.sentences) {
                     const line = sentence.trans.replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -89,6 +192,7 @@
             }).catch(error => {
                 console.error('Translate Request error:', error);
             });
+        }
     }
 
     function ResetTranslateButton(tb) {
@@ -108,7 +212,7 @@
         let tb = document.createElement("a");
         tb.id = "translate-btn";
         tb.classList = "yt-simple-endpoint style-scope yt-formatted-string";
-        console.log(`Original Text: ${main.querySelector(QS_CONTENT_TEXT)}`);
+        // console.log(`Original Text: ${main.querySelector(QS_CONTENT_TEXT)}`);
         tb._otext = main.querySelector(QS_CONTENT_TEXT);
 
         tb._ntext = document.createElement("div");
@@ -188,17 +292,17 @@
         const nodes = commentParent.querySelectorAll('.parent-comment');
         for (let n of nodes) {
             let main = n.querySelector(".comment-inner-container");
-            console.log(main);
+            // console.log(main);
             if (!main) continue;
             let tb = main.querySelector(QS_TRANSLATE_BUTTON);
             if (tb != null) {
-                console.log("Resetting translate button");
+                // console.log("Resetting translate button");
                 ResetTranslateButton(tb);
             } else {
-                console.log("Injecting translate button");
+                // console.log("Injecting translate button");
                 let newTranslateButton = main.querySelector('.translate-button');
                 if (newTranslateButton != null) {
-                    console.log("Removing old translate button");
+                    // console.log("Removing old translate button");
                     newTranslateButton.style.display = 'none';
                 }
 
@@ -209,17 +313,17 @@
         const replyNodes = commentParent.querySelectorAll('.comment-item');
         for (let n of replyNodes) {
             let main = n.querySelector(".comment-inner-container");
-            console.log(main);
+            // console.log(main);
             if (!main) continue;
             let tb = main.querySelector(QS_TRANSLATE_BUTTON);
             if (tb != null) {
-                console.log("Resetting translate button");
+                // console.log("Resetting translate button");
                 ResetTranslateButton(tb);
             } else {
-                console.log("Injecting translate button");
+                // console.log("Injecting translate button");
                 let newTranslateButton = main.querySelector('.translate-button');
                 if (newTranslateButton != null) {
-                    console.log("Removing old translate button");
+                    // console.log("Removing old translate button");
                     newTranslateButton.style.display = 'none';
                 }
 
@@ -280,13 +384,18 @@
     /* Functions */
     // Inject as soon as the comment section was loaded
     function inject() {
-        console.log("Injecting RedNote-Comment-Translate");
+        // console.log("Injecting RedNote-Comment-Translate");
         const observerConfig = { childList: true, subtree: true };
         const commentObserver = new MutationObserver(e => {
             for (let mut of e) {
-                console.log("load as addinational" + mut.target.classList);
                 if (mut.target.classList.contains("list-container")) {
                     updateUI(mut.target);
+                }
+
+                if (mut.target.classList.contains("main-content")) {
+                    document.querySelectorAll(".list-container").forEach((el) => {
+                        updateUI(el);
+                    });
                 }
 
                 if (mut.target.nodeName === 'YTD-COMMENTS-HEADER-RENDERER' && window.location.pathname.startsWith('/watch')) {
@@ -298,9 +407,5 @@
         });
 
         commentObserver.observe(document, observerConfig);
-    }
-
-    document.querySelectorAll(".list-container").forEach((el) => {
-        updateUI(el);
-    });
+    }    
 })();
